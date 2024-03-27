@@ -12,17 +12,16 @@ foreach ($ResourceGroup in $ResourceGroups)
     
     foreach ($WebApp in $WebApps)
     {
-        Write-Output ("WebApp Details is " + $WebApp.Id + " " + $WebApp.Name + " " + $WebApp.State)
+        $AspPlanName = $WebApp.ServerFarmId
+        $AspPlanName
 
-        Write-Output ("metrics for WebApp " + $WebApp.Name + " is ")  
+        $MetricsDefinitions = Get-AzMetricDefinition -ResourceId $WebApp.ServerFarmId
+        
+        foreach ($metric in $MetricsDefinitions)
+        {
+            $MetricName = $metric.Name.Value
 
-        $MetricsDefinitions = Get-AzMetricDefinition -ResourceId $WebApp.Id
-        $MetricsDefinitions
-
-        foreach($metric in $MetricsDefinitions) {
-            $MetricName=$metric.Name.Value
-            #$MetricName
-            if ($MetricName -eq "CpuTime" -or $MetricName -eq "Requests" -or $MetricName -eq "AverageMemoryWorkingSet" -or $MetricName -eq "MemoryWorkingSet" -or $MetricName -eq "BytesReceived" -or $MetricName -eq "BytesSent" -or $MetricName -eq "Http2xx")
+            if ($MetricName -eq "CpuPercentage" -or $MetricName -eq "MemoryPercentage")
             {
                 Write-Output ("******************")
             
@@ -30,7 +29,7 @@ foreach ($ResourceGroup in $ResourceGroups)
                 Write-Output ("Metric supported AggregationType is " + $metric.SupportedAggregationTypes)
                 Write-Output ("Primary AggregationType is " + $metric.PrimaryAggregationType)
                 Write-Output ("Unit for AggregationType is " + $metric.Unit)
-            
+
                 $totalRequests=0
                 $count=0
                 $maxRequests=0
@@ -43,10 +42,7 @@ foreach ($ResourceGroup in $ResourceGroups)
 
                     if ($aggtype -ne "None") 
                     {
-                        $MetricsDetails = Get-AzMetric -ResourceId $WebApp.Id -MetricName $metric.Name.Value -TimeGrain 00:15:00 -StartTime (Get-Date).AddDays(-1) -EndTime (Get-Date) -AggregationType $aggtype -WarningAction SilentlyContinue
-
-                        #$MetricsDetails.Data
-
+                        $MetricsDetails = Get-AzMetric -ResourceId $WebApp.ServerFarmId -MetricName $metric.Name.Value -TimeGrain 00:15:00 -StartTime (Get-Date).AddDays(-1) -EndTime (Get-Date) -AggregationType $aggtype -WarningAction SilentlyContinue
                         if ($MetricsDetails.Count -gt 0) 
                         {
 
@@ -79,7 +75,6 @@ foreach ($ResourceGroup in $ResourceGroups)
                         {
                             Write-Host "No metric data available for the last 1 days."
                         }
-
                     }
                 }
 
@@ -97,8 +92,8 @@ foreach ($ResourceGroup in $ResourceGroups)
 
                 $metricsData = [PSCustomObject]@{
                     ResourceGroup = $ResourceGroup
-                    ResourceName = $WebApp.Name
-                    ServerFarm = $WebApp.ServerFarmId
+                    WebAppName = $WebApp.Name
+                    ResourceName = $WebApp.ServerFarmId
                     State = $WebApp.State
                     Metricsname = $MetricName
                     Total = $totalRequests
@@ -111,12 +106,10 @@ foreach ($ResourceGroup in $ResourceGroups)
                 }
 
                 $DataToExport += $metricsData
-
             }
-
         }
     }
 
-    #$DataToExport | Export-Csv -Path C:\AZMetric_export\webapp_$ResourceGroup.csv
-    $DataToExport | Export-Excel -Path C:\AZMetric_export\webapp_$ResourceGroup.xlsx
+    $DataToExport | Export-Csv -Path C:\AZMetric_export\ASP_$ResourceGroup.csv
+    $DataToExport | Export-Excel -Path C:\AZMetric_export\ASP_$ResourceGroup.xlsx
 }
