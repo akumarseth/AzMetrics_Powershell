@@ -43,6 +43,11 @@ foreach ($ResourceGroup in $ResourceGroups)
                     if ($aggtype -ne "None") 
                     {
                         $MetricsDetails = Get-AzMetric -ResourceId $WebApp.ServerFarmId -MetricName $metric.Name.Value -TimeGrain 00:15:00 -StartTime (Get-Date).AddDays(-1) -EndTime (Get-Date) -AggregationType $aggtype -WarningAction SilentlyContinue
+                        #$MetricsDetails.Data
+                        $file_name = "ASP_$aggtype" + "_$ResourceGroup.json"
+
+                        $MetricsDetails.Data | ConvertTo-Json -depth 100 | Out-File "C:\AZMetric_export\$file_name"
+                        
                         if ($MetricsDetails.Count -gt 0) 
                         {
 
@@ -110,6 +115,6 @@ foreach ($ResourceGroup in $ResourceGroups)
         }
     }
 
-    $DataToExport | Export-Csv -Path C:\AZMetric_export\ASP_$ResourceGroup.csv
+    #$DataToExport | Export-Csv -Path C:\AZMetric_export\ASP_$ResourceGroup.csv
     $DataToExport | Export-Excel -Path C:\AZMetric_export\ASP_$ResourceGroup.xlsx
 }
